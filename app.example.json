@@ -1,0 +1,45 @@
+{
+	"expo": {
+		"name": "SociaLynx",
+		"slug": "socialynx",
+		"version": "1.0.0",
+		"orientation": "portrait",
+		"icon": "./assets/icon.png",
+		"splash": {
+			"image": "./assets/splash.png",
+			"resizeMode": "contain",
+			"backgroundColor": "#7B2FF7"
+		},
+		"assetBundlePatterns": ["**/*"],
+		"ios": {
+			"supportsTablet": true,
+			"bundleIdentifier": ""
+		},
+		"android": {
+			"adaptiveIcon": {
+				"foregroundImage": "./assets/adaptive-icon.png",
+				"backgroundColor": "#ffffff"
+			},
+			"package": ""
+		},
+		"web": {
+			"favicon": "./assets/favicon.png"
+		},
+		"extra": {
+			"firebase": {
+				"apiKey": "",
+				"authDomain": "",
+				"projectId": "",
+				"storageBucket": "",
+				"messagingSenderId": "",
+				"appId": ""
+			},
+			"openaiFunctionUrl": "",
+			"yookassa": {
+				"shopId": "",
+				"secretKey": ""
+			},
+			"backendUrl": ""
+		}
+	}
+}

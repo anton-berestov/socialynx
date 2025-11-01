@@ -1,0 +1,12 @@
+node_modules
+.expo
+.expo-shared
+ios
+android
+web-build
+.DS_Store
+.env
+functions/lib
+functions/node_modules
+/app.json
+/.idea/
