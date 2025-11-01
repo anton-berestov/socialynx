@@ -116,7 +116,7 @@ export const MainScreen: React.FC = () => {
                       navigation.navigate('Paywall');
                       return;
                     }
-                    setSelectedTone(tone.key);
+                    setSelectedTone(tone.key as any);
                   }}
                   style={[
                     styles.chipSmall,
