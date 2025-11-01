@@ -6,13 +6,17 @@ import { ContentLength, ContentType, CONTENT_TYPES, LENGTHS, TONES } from '../co
 import { useContentGenerator } from '../hooks/useContentGenerator';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useDailyLimit } from '../hooks/useDailyLimit';
-import { colors, spacing, typography } from '../styles/theme';
+import { lightColors, darkColors, spacing, typography, borderRadius, shadows } from '../styles/theme';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { AdBannerPlaceholder } from '../components/AdBannerPlaceholder';
+import { useTheme } from '../context/ThemeContext';
 
 export const MainScreen: React.FC = () => {
+  const { isDark } = useTheme();
+  const colors = isDark ? darkColors : lightColors;
+
   const [prompt, setPrompt] = useState('');
   const [selectedType, setSelectedType] = useState<ContentType>('post');
   const [selectedTone, setSelectedTone] = useState(TONES[0].key);
@@ -47,164 +51,188 @@ export const MainScreen: React.FC = () => {
   }, [prompt, selectedType, selectedTone, selectedLength, handleGenerate, consume, isPro, remaining, navigation]);
 
   const handleCopy = useCallback(async () => {
-    if (!result) {
-      return;
-    }
+    if (!result) return;
     await Clipboard.setStringAsync(result);
     Alert.alert('Скопировано', 'Текст добавлен в буфер обмена.');
   }, [result]);
 
+  const styles = createStyles(colors, isDark);
+
   return (
     <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <Text style={styles.title}>Генератор контента</Text>
-      <Text style={styles.description}>
-        Введите ключевую мысль или задачу — SociaLynx подготовит пост, описание, хэштеги или заголовок.
-      </Text>
-
-      <Text style={styles.sectionTitle}>Тема</Text>
-      <TextInput
-        value={prompt}
-        onChangeText={setPrompt}
-        placeholder="Например: продвижение эко-товаров"
-        multiline
-        style={styles.promptInput}
-      />
-
-      <Text style={styles.sectionTitle}>Тип генерации</Text>
-      <View style={styles.chipRow}>
-        {CONTENT_TYPES.map((type) => (
-          <TouchableOpacity
-            key={type.key}
-            onPress={() => setSelectedType(type.key)}
-            style={[
-              styles.chip,
-              selectedType === type.key && styles.chipActive,
-              { marginRight: spacing.sm, marginBottom: spacing.sm }
-            ]}
-          >
-            <Text style={[styles.chipText, selectedType === type.key && styles.chipTextActive]}>{type.label}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.header}>
+        <Text style={styles.title}>Генератор контента</Text>
+        <Text style={styles.description}>
+          Опишите идею — получите готовый пост, описание, хэштеги или заголовок
+        </Text>
       </View>
 
-      <Text style={styles.sectionTitle}>Настройки</Text>
-      <View style={styles.card}>
-        <Text style={styles.cardLabel}>Тон</Text>
-        <View style={styles.chipRow}>
-          {TONES.map((tone) => {
-            const locked = !isPro && tone.key !== 'friendly';
-            const active = selectedTone === tone.key;
-            return (
-              <TouchableOpacity
-                key={tone.key}
-                onPress={() => {
-                  if (locked) {
-                    navigation.navigate('Paywall');
-                    return;
-                  }
-                  setSelectedTone(tone.key);
-                }}
-                style={[
-                  styles.chipSmall,
-                  active && styles.chipActive,
-                  locked && styles.chipLocked,
-                  { marginRight: spacing.sm, marginBottom: spacing.sm }
-                ]}
-              >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{tone.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+      <View style={styles.section}>
+        <Text style={styles.label}>Тема</Text>
+        <TextInput
+          value={prompt}
+          onChangeText={setPrompt}
+          placeholder="Например: продвижение эко-товаров"
+          placeholderTextColor={colors.textTertiary}
+          multiline
+          style={styles.promptInput}
+        />
+      </View>
 
-        <Text style={styles.cardLabel}>Длина</Text>
+      <View style={styles.section}>
+        <Text style={styles.label}>Тип контента</Text>
         <View style={styles.chipRow}>
-          {LENGTHS.map((length) => {
-            const locked = !isPro && length.key === 'long';
-            const active = selectedLength === length.key;
-            return (
-              <TouchableOpacity
-                key={length.key}
-                onPress={() => {
-                  if (locked) {
-                    navigation.navigate('Paywall');
-                    return;
-                  }
-                  setSelectedLength(length.key);
-                }}
-                style={[
-                  styles.chipSmall,
-                  active && styles.chipSecondaryActive,
-                  locked && styles.chipLocked,
-                  { marginRight: spacing.sm, marginBottom: spacing.sm }
-                ]}
-              >
-                <Text
+          {CONTENT_TYPES.map((type) => (
+            <TouchableOpacity
+              key={type.key}
+              onPress={() => setSelectedType(type.key)}
+              style={[
+                styles.chip,
+                selectedType === type.key && styles.chipActive
+              ]}
+            >
+              <Text style={[styles.chipText, selectedType === type.key && styles.chipTextActive]}>
+                {type.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Настройки генерации</Text>
+
+        <View style={styles.settingSection}>
+          <Text style={styles.settingLabel}>Тон</Text>
+          <View style={styles.chipRow}>
+            {TONES.map((tone) => {
+              const locked = !isPro && tone.key !== 'friendly';
+              const active = selectedTone === tone.key;
+              return (
+                <TouchableOpacity
+                  key={tone.key}
+                  onPress={() => {
+                    if (locked) {
+                      navigation.navigate('Paywall');
+                      return;
+                    }
+                    setSelectedTone(tone.key);
+                  }}
                   style={[
-                    styles.chipText,
-                    active && styles.chipTextActive,
-                    active && { color: '#fff' }
+                    styles.chipSmall,
+                    active && styles.chipSmallActive,
+                    locked && styles.chipLocked
                   ]}
                 >
-                  {length.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+                  <Text style={[styles.chipSmallText, active && styles.chipSmallTextActive]}>
+                    {tone.label} {locked && '🔒'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
+
+        <View style={styles.settingSection}>
+          <Text style={styles.settingLabel}>Длина</Text>
+          <View style={styles.chipRow}>
+            {LENGTHS.map((length) => {
+              const locked = !isPro && length.key === 'long';
+              const active = selectedLength === length.key;
+              return (
+                <TouchableOpacity
+                  key={length.key}
+                  onPress={() => {
+                    if (locked) {
+                      navigation.navigate('Paywall');
+                      return;
+                    }
+                    setSelectedLength(length.key);
+                  }}
+                  style={[
+                    styles.chipSmall,
+                    active && styles.chipSmallSecondaryActive,
+                    locked && styles.chipLocked
+                  ]}
+                >
+                  <Text style={[styles.chipSmallText, active && styles.chipSmallTextActive]}>
+                    {length.label} {locked && '🔒'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         {!isPro && (
-          <Text style={styles.cardHelper}>Длинные тексты и выбор тона доступны в PRO.</Text>
+          <View style={styles.proHint}>
+            <Text style={styles.proHintText}>
+              ✨ PRO: выбор тона и длинные тексты
+            </Text>
+          </View>
         )}
       </View>
 
       {!isPro && (
         <View style={styles.limitCard}>
-          <Text style={styles.limitTitle}>Осталось генераций: {limitLoading ? '…' : remaining}</Text>
-          <Text style={styles.limitDescription}>
-            Бесплатно доступно {remaining} из 3 генераций в сутки. Оформите PRO, чтобы снимать ограничения и отключить рекламу.
-          </Text>
+          <View style={styles.limitBadge}>
+            <Text style={styles.limitBadgeText}>{limitLoading ? '…' : remaining}/3</Text>
+          </View>
+          <View style={styles.limitContent}>
+            <Text style={styles.limitTitle}>Генераций сегодня</Text>
+            <Text style={styles.limitDescription}>
+              Оформите PRO для безлимитных генераций и отключения рекламы
+            </Text>
+          </View>
         </View>
       )}
 
-      {/* Placeholder for Yandex Ads banner until native modules are connected */}
       <AdBannerPlaceholder hidden={isPro} />
 
       <TouchableOpacity
         onPress={onGeneratePress}
         style={[styles.generateButton, loading && styles.generateButtonDisabled]}
         disabled={loading}
+        activeOpacity={0.8}
       >
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.generateButtonText}>Сгенерировать</Text>}
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.generateButtonText}>✨ Сгенерировать</Text>
+        )}
       </TouchableOpacity>
 
       {error && (
         <View style={styles.errorCard}>
+          <Text style={styles.errorTitle}>⚠️ Ошибка</Text>
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
 
-      {result ? (
+      {result && (
         <View style={styles.resultCard}>
-          <Text style={styles.resultTitle}>Результат</Text>
+          <View style={styles.resultHeader}>
+            <Text style={styles.resultTitle}>Результат</Text>
+            <TouchableOpacity onPress={handleCopy} style={styles.copyButton}>
+              <Text style={styles.copyButtonText}>Скопировать</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.resultText}>{result}</Text>
-          <TouchableOpacity
-            onPress={handleCopy}
-            style={styles.copyButton}
-          >
-            <Text style={styles.copyButtonText}>Скопировать</Text>
-          </TouchableOpacity>
         </View>
-      ) : null}
+      )}
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof lightColors, isDark: boolean) => StyleSheet.create({
   container: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.xl,
     flexGrow: 1,
     backgroundColor: colors.background
+  },
+  header: {
+    marginBottom: spacing.xl
   },
   title: {
     ...typography.title,
@@ -213,112 +241,143 @@ const styles = StyleSheet.create({
   },
   description: {
     ...typography.body,
-    color: colors.muted,
-    marginBottom: spacing.md
+    color: colors.textSecondary,
+    lineHeight: 22
   },
-  sectionTitle: {
+  section: {
+    marginBottom: spacing.lg
+  },
+  label: {
     ...typography.subtitle,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
     color: colors.text
   },
   promptInput: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
     minHeight: 120,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
-    marginBottom: spacing.lg,
+    borderColor: colors.border,
     textAlignVertical: 'top',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2
+    color: colors.text,
+    ...typography.body,
+    ...shadows.sm
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: spacing.lg
+    gap: spacing.sm
   },
   chip: {
-    backgroundColor: colors.white,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1
-  },
-  chipSmall: {
-    backgroundColor: colors.white,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    ...shadows.sm
   },
   chipActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary
   },
-  chipSecondaryActive: {
-    backgroundColor: colors.secondary,
-    borderColor: colors.secondary
-  },
   chipText: {
+    ...typography.button,
     color: colors.text
   },
   chipTextActive: {
     color: '#fff'
   },
-  chipLocked: {
-    opacity: 0.5
-  },
   card: {
-    backgroundColor: colors.white,
-    padding: spacing.md,
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: colors.border,
     marginBottom: spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2
+    ...shadows.md
   },
-  cardLabel: {
-    ...typography.caption,
-    color: colors.muted,
-    marginBottom: spacing.sm
+  cardTitle: {
+    ...typography.heading,
+    color: colors.text,
+    marginBottom: spacing.lg
   },
-  cardHelper: {
+  settingSection: {
+    marginBottom: spacing.lg
+  },
+  settingLabel: {
     ...typography.caption,
-    color: colors.muted,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5
+  },
+  chipSmall: {
+    backgroundColor: colors.surfaceElevated,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border
+  },
+  chipSmallActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary
+  },
+  chipSmallSecondaryActive: {
+    backgroundColor: colors.secondary,
+    borderColor: colors.secondary
+  },
+  chipSmallText: {
+    ...typography.body,
+    color: colors.text
+  },
+  chipSmallTextActive: {
+    color: '#fff',
+    fontWeight: '600'
+  },
+  chipLocked: {
+    opacity: 0.6
+  },
+  proHint: {
+    backgroundColor: isDark ? 'rgba(129, 140, 248, 0.1)' : 'rgba(99, 102, 241, 0.05)',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
     marginTop: spacing.sm
   },
+  proHintText: {
+    ...typography.caption,
+    color: colors.primary,
+    textAlign: 'center'
+  },
   limitCard: {
-    backgroundColor: colors.white,
-    padding: spacing.md,
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: colors.border,
     marginBottom: spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2
+    flexDirection: 'row',
+    alignItems: 'center',
+    ...shadows.sm
+  },
+  limitBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.full,
+    backgroundColor: isDark ? 'rgba(129, 140, 248, 0.15)' : 'rgba(99, 102, 241, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md
+  },
+  limitBadgeText: {
+    ...typography.heading,
+    color: colors.primary,
+    fontWeight: '700'
+  },
+  limitContent: {
+    flex: 1
   },
   limitTitle: {
     ...typography.subtitle,
@@ -326,69 +385,75 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs
   },
   limitDescription: {
-    ...typography.body,
-    color: colors.muted
+    ...typography.caption,
+    color: colors.textSecondary,
+    lineHeight: 18
   },
   generateButton: {
     backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: 18,
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
     marginBottom: spacing.lg,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4
+    ...shadows.lg
   },
   generateButtonDisabled: {
-    opacity: 0.7
+    opacity: 0.6
   },
   generateButtonText: {
+    ...typography.button,
     color: '#fff',
-    fontWeight: '600'
+    fontSize: 17
   },
   errorCard: {
-    backgroundColor: '#FEE2E2',
-    padding: spacing.md,
-    borderRadius: 16,
-    marginBottom: spacing.lg
+    backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEE2E2',
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEF2F2'
+  },
+  errorTitle: {
+    ...typography.subtitle,
+    color: colors.danger,
+    marginBottom: spacing.xs
   },
   errorText: {
     ...typography.body,
     color: colors.danger
   },
   resultCard: {
-    backgroundColor: colors.white,
-    padding: spacing.md,
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3
+    borderColor: colors.border,
+    ...shadows.lg
   },
-  resultTitle: {
-    ...typography.subtitle,
-    color: colors.text,
-    marginBottom: spacing.sm
-  },
-  resultText: {
-    ...typography.body,
-    color: colors.text,
+  resultHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: spacing.md
   },
+  resultTitle: {
+    ...typography.heading,
+    color: colors.text
+  },
   copyButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: spacing.xs,
+    backgroundColor: colors.secondary,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: 12,
-    backgroundColor: colors.secondary
+    borderRadius: borderRadius.md
   },
   copyButtonText: {
+    ...typography.button,
     color: '#fff',
-    fontWeight: '600'
+    fontSize: 14
+  },
+  resultText: {
+    ...typography.bodyLarge,
+    color: colors.text,
+    lineHeight: 24
   }
 });

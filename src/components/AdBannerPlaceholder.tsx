@@ -1,15 +1,21 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing, typography } from '../styles/theme';
+import { lightColors, darkColors, spacing, typography, borderRadius } from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
 
 interface Props {
   hidden?: boolean;
 }
 
 export const AdBannerPlaceholder: React.FC<Props> = ({ hidden }) => {
+  const { isDark } = useTheme();
+  const colors = isDark ? darkColors : lightColors;
+
   if (hidden) {
     return null;
   }
+
+  const styles = createStyles(colors);
 
   return (
     <View style={styles.container}>
@@ -19,12 +25,12 @@ export const AdBannerPlaceholder: React.FC<Props> = ({ hidden }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof lightColors) => StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
     padding: spacing.md,
     alignItems: 'center',
     marginBottom: spacing.lg
@@ -36,7 +42,7 @@ const styles = StyleSheet.create({
   },
   text: {
     ...typography.caption,
-    color: colors.muted,
+    color: colors.textSecondary,
     textAlign: 'center'
   }
 });

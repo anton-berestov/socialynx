@@ -5,12 +5,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { fetchGenerations } from '../services/firestoreService';
 import { GeneratedContentItem } from '../types/content';
-import { colors, spacing, typography } from '../styles/theme';
+import { lightColors, darkColors, spacing, typography, borderRadius, shadows } from '../styles/theme';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { useSubscription } from '../context/SubscriptionContext';
+import { useTheme } from '../context/ThemeContext';
 
 export const HistoryScreen: React.FC = () => {
+  const { isDark } = useTheme();
+  const colors = isDark ? darkColors : lightColors;
+
   const { user } = useAuth();
   const [items, setItems] = useState<GeneratedContentItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -66,11 +70,15 @@ export const HistoryScreen: React.FC = () => {
     load(true, true);
   }, [load]);
 
+  const styles = createStyles(colors, isDark);
+
   if (!user) {
     return (
       <View style={styles.emptyContainer}>
+        <Text style={styles.emptyIcon}>🔐</Text>
+        <Text style={styles.emptyTitle}>Войдите в аккаунт</Text>
         <Text style={styles.emptyText}>
-          Авторизуйтесь, чтобы сохранять и просматривать историю генераций.
+          Авторизуйтесь, чтобы сохранять и просматривать историю генераций
         </Text>
       </View>
     );
@@ -79,15 +87,16 @@ export const HistoryScreen: React.FC = () => {
   if (!isPro) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.proTitle}>История доступна в PRO</Text>
-        <Text style={styles.proDescription}>
-          Сохранённые посты и проекты доступны только подписчикам SociaLynx PRO.
+        <Text style={styles.emptyIcon}>✨</Text>
+        <Text style={styles.emptyTitle}>История доступна в PRO</Text>
+        <Text style={styles.emptyText}>
+          Сохранённые генерации доступны только подписчикам SociaLynx PRO
         </Text>
         <TouchableOpacity
           onPress={() => navigation.navigate('Paywall')}
-          style={styles.proButton}
+          style={styles.upgradeButton}
         >
-          <Text style={styles.proButtonText}>Оформить PRO</Text>
+          <Text style={styles.upgradeButtonText}>Оформить PRO</Text>
         </TouchableOpacity>
       </View>
     );
@@ -97,9 +106,12 @@ export const HistoryScreen: React.FC = () => {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.lg }]}>
         <Text style={styles.title}>История</Text>
+        <Text style={styles.subtitle}>Все ваши генерации</Text>
       </View>
       {loading && !refreshing ? (
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator color={colors.primary} size="large" />
+        </View>
       ) : (
         <FlatList
           data={items}
@@ -117,17 +129,31 @@ export const HistoryScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.item}
               onPress={() => navigation.navigate('GenerationDetails', { id: item.id })}
+              activeOpacity={0.7}
             >
-              <Text style={styles.itemPrompt}>{item.prompt}</Text>
-              <Text style={styles.itemMeta}>
-                {item.type} · {new Date(item.createdAt).toLocaleString()}
-              </Text>
+              <View style={styles.itemHeader}>
+                <View style={styles.typeBadge}>
+                  <Text style={styles.typeBadgeText}>{item.type}</Text>
+                </View>
+                <Text style={styles.itemDate}>
+                  {new Date(item.createdAt).toLocaleDateString('ru-RU', {
+                    day: 'numeric',
+                    month: 'short'
+                  })}
+                </Text>
+              </View>
+              <Text style={styles.itemPrompt} numberOfLines={2}>{item.prompt}</Text>
+              <Text style={styles.itemResult} numberOfLines={3}>{item.result}</Text>
             </TouchableOpacity>
           )}
           ListEmptyComponent={
-            <Text style={styles.emptyListText}>
-              У вас пока нет сохраненных генераций. Сгенерируйте первый пост!
-            </Text>
+            <View style={styles.emptyList}>
+              <Text style={styles.emptyListIcon}>📝</Text>
+              <Text style={styles.emptyListTitle}>Пока пусто</Text>
+              <Text style={styles.emptyListText}>
+                У вас пока нет сохранённых генераций. Создайте первый пост!
+              </Text>
+            </View>
           }
         />
       )}
@@ -135,77 +161,128 @@ export const HistoryScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: typeof lightColors, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background
   },
   header: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm
+    paddingBottom: spacing.md,
+    backgroundColor: colors.background
   },
   title: {
     ...typography.title,
-    color: colors.text
+    color: colors.text,
+    marginBottom: spacing.xs
+  },
+  subtitle: {
+    ...typography.body,
+    color: colors.textSecondary
   },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.lg
+    padding: spacing.xl,
+    backgroundColor: colors.background
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: spacing.lg
+  },
+  emptyTitle: {
+    ...typography.heading,
+    color: colors.text,
+    marginBottom: spacing.sm,
+    textAlign: 'center'
   },
   emptyText: {
     ...typography.body,
-    color: colors.muted,
-    textAlign: 'center'
-  },
-  proTitle: {
-    ...typography.subtitle,
-    color: colors.text,
-    marginBottom: spacing.sm
-  },
-  proDescription: {
-    ...typography.body,
-    color: colors.muted,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: spacing.lg
+    marginBottom: spacing.xl,
+    lineHeight: 22
   },
-  proButton: {
+  upgradeButton: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: 18
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.lg,
+    ...shadows.md
   },
-  proButtonText: {
-    color: '#fff',
-    fontWeight: '600'
+  upgradeButtonText: {
+    ...typography.button,
+    color: '#fff'
   },
-  loader: {
-    marginTop: spacing.lg
+  loaderContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   listContent: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg
+    paddingBottom: spacing.xl
   },
   item: {
-    backgroundColor: '#fff',
-    padding: spacing.md,
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: borderRadius.xl,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border,
+    ...shadows.sm
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: spacing.md
+  },
+  typeBadge: {
+    backgroundColor: isDark ? 'rgba(129, 140, 248, 0.15)' : 'rgba(99, 102, 241, 0.1)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm
+  },
+  typeBadgeText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
+    textTransform: 'capitalize'
+  },
+  itemDate: {
+    ...typography.caption,
+    color: colors.textTertiary
   },
   itemPrompt: {
     ...typography.subtitle,
     color: colors.text,
-    marginBottom: spacing.xs
+    marginBottom: spacing.sm
   },
-  itemMeta: {
-    ...typography.caption,
-    color: colors.muted
+  itemResult: {
+    ...typography.body,
+    color: colors.textSecondary,
+    lineHeight: 20
+  },
+  emptyList: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxl
+  },
+  emptyListIcon: {
+    fontSize: 48,
+    marginBottom: spacing.md
+  },
+  emptyListTitle: {
+    ...typography.heading,
+    color: colors.text,
+    marginBottom: spacing.sm
   },
   emptyListText: {
     ...typography.body,
-    color: colors.muted
+    color: colors.textSecondary,
+    textAlign: 'center',
+    maxWidth: 280,
+    lineHeight: 22
   }
 });

@@ -8,19 +8,27 @@ import { ProfileScreen } from '../screens/ProfileScreen';
 import { PaywallScreen } from '../screens/PaywallScreen';
 import { GenerationDetailsScreen } from '../screens/GenerationDetailsScreen';
 import { RootStackParamList, TabParamList } from './types';
-import { colors } from '../styles/theme';
+import { lightColors, darkColors } from '../styles/theme';
+import { useTheme } from '../context/ThemeContext';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tabs = createBottomTabNavigator<TabParamList>();
 
 function TabsNavigator() {
+  const { isDark } = useTheme();
+  const colors = isDark ? darkColors : lightColors;
+
   return (
     <Tabs.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: '#9CA3AF',
-        tabBarStyle: { borderTopColor: '#E5E7EB', backgroundColor: '#fff' },
+        tabBarInactiveTintColor: colors.textTertiary,
+        tabBarStyle: {
+          borderTopColor: colors.border,
+          backgroundColor: colors.surface,
+          borderTopWidth: 1
+        },
         tabBarIcon: ({ color, size }) => {
           const iconName =
             route.name === 'Home' ? 'lightbulb-on-outline' : route.name === 'History' ? 'clock-outline' : 'account-circle-outline';

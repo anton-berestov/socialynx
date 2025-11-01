@@ -9,4 +9,5 @@ export interface GeneratedContentItem {
   result: string;
   createdAt: number;
   isProOnly?: boolean;
+  tokensUsed?: string;
 }
