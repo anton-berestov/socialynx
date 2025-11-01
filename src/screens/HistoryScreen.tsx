@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useState, useRef } from 'react';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
@@ -14,30 +14,57 @@ export const HistoryScreen: React.FC = () => {
   const { user } = useAuth();
   const [items, setItems] = useState<GeneratedContentItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { status } = useSubscription();
   const isPro = status === 'pro';
   const insets = useSafeAreaInsets();
+  const userRef = useRef(user);
+  const isProRef = useRef(isPro);
+  const hasLoadedRef = useRef(false);
 
-  const load = useCallback(async () => {
-    if (!user || !isPro) {
+  userRef.current = user;
+  isProRef.current = isPro;
+
+  const load = useCallback(async (isRefresh = false, force = false) => {
+    if (!userRef.current || !isProRef.current) {
       setItems([]);
+      hasLoadedRef.current = false;
       return;
     }
-    setLoading(true);
-    try {
-      const data = await fetchGenerations(user.uid);
-      setItems(data);
-    } finally {
-      setLoading(false);
+
+    if (hasLoadedRef.current && !force) {
+      return;
     }
-  }, [user, isPro]);
+
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      const data = await fetchGenerations(userRef.current.uid);
+      setItems(data);
+      hasLoadedRef.current = true;
+    } finally {
+      if (isRefresh) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       load();
     }, [load])
   );
+
+  const onRefresh = useCallback(() => {
+    load(true, true);
+  }, [load]);
 
   if (!user) {
     return (
@@ -71,13 +98,21 @@ export const HistoryScreen: React.FC = () => {
       <View style={[styles.header, { paddingTop: insets.top + spacing.lg }]}>
         <Text style={styles.title}>История</Text>
       </View>
-      {loading ? (
+      {loading && !refreshing ? (
         <ActivityIndicator color={colors.primary} style={styles.loader} />
       ) : (
         <FlatList
           data={items}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.item}
