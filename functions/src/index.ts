@@ -8,11 +8,29 @@ admin.initializeApp();
 
 const db = admin.firestore();
 
-const PLAN_PRICES: Record<string, { amount: number; description: string; period: string }> = {
-  plan_monthly: { amount: 19900, description: 'SociaLynx PRO — месяц', period: 'month' },
-  plan_quarterly: { amount: 49900, description: 'SociaLynx PRO — 3 месяца', period: 'quarter' },
-  plan_yearly: { amount: 149900, description: 'SociaLynx PRO — год', period: 'year' }
-};
+interface PaymentPlan {
+  id: string;
+  title: string;
+  price: number;
+  periodLabel: string;
+  description: string;
+  durationDays: number;
+  isPopular?: boolean;
+  order?: number;
+}
+
+async function getPlanFromFirestore(planId: string): Promise<PaymentPlan | null> {
+  try {
+    const doc = await db.collection('paymentPlans').doc(planId).get();
+    if (!doc.exists) {
+      return null;
+    }
+    return { id: doc.id, ...doc.data() } as PaymentPlan;
+  } catch (error) {
+    functions.logger.error('Error fetching plan from Firestore', error);
+    return null;
+  }
+}
 
 type GenerateRequest = {
   prompt: string;
@@ -106,9 +124,15 @@ export const createPayment = functions
       return;
     }
 
-    const { userId, plan } = req.body as { userId?: string; plan?: keyof typeof PLAN_PRICES };
-    if (!userId || !plan || !PLAN_PRICES[plan]) {
+    const { userId, plan } = req.body as { userId?: string; plan?: string };
+    if (!userId || !plan) {
       res.status(400).json({ error: 'Invalid payload' });
+      return;
+    }
+
+    const planData = await getPlanFromFirestore(plan);
+    if (!planData) {
+      res.status(400).json({ error: 'Invalid plan' });
       return;
     }
 
@@ -121,14 +145,13 @@ export const createPayment = functions
     }
 
     const idempotenceKey = randomUUID();
-    const price = PLAN_PRICES[plan];
 
     try {
       const response = await axios.post(
         'https://api.yookassa.ru/v3/payments',
         {
           amount: {
-            value: (price.amount / 100).toFixed(2),
+            value: (planData.price / 100).toFixed(2),
             currency: 'RUB'
           },
           capture: true,
@@ -136,7 +159,7 @@ export const createPayment = functions
             type: 'redirect',
             return_url: 'https://socialynx.app/payments/success'
           },
-          description: price.description,
+          description: planData.description,
           metadata: {
             userId,
             plan
@@ -193,25 +216,24 @@ export const paymentCallback = functions
 
       if (payment.status === 'succeeded') {
         const { userId, plan } = payment.metadata ?? {};
-        if (userId && plan && PLAN_PRICES[plan]) {
-          const now = admin.firestore.Timestamp.now();
-          const expiresAt = admin.firestore.Timestamp.fromMillis(
-            plan === 'plan_monthly'
-              ? now.toMillis() + 30 * 24 * 60 * 60 * 1000
-              : plan === 'plan_quarterly'
-              ? now.toMillis() + 90 * 24 * 60 * 60 * 1000
-              : now.toMillis() + 365 * 24 * 60 * 60 * 1000
-          );
+        if (userId && plan) {
+          const planData = await getPlanFromFirestore(plan);
+          if (planData) {
+            const now = admin.firestore.Timestamp.now();
+            const expiresAt = admin.firestore.Timestamp.fromMillis(
+              now.toMillis() + planData.durationDays * 24 * 60 * 60 * 1000
+            );
 
-          await db.collection('subscriptions').doc(userId).set(
-            {
-              status: 'pro',
-              planId: plan,
-              updatedAt: now,
-              expiresAt
-            },
-            { merge: true }
-          );
+            await db.collection('subscriptions').doc(userId).set(
+              {
+                status: 'pro',
+                planId: plan,
+                updatedAt: now,
+                expiresAt
+              },
+              { merge: true }
+            );
+          }
         }
       }
     } catch (error) {

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { PAYMENT_PLANS, createPaymentSession } from '../services/yookassaService';
+import { createPaymentSession } from '../services/yookassaService';
+import { fetchPaymentPlans, PaymentPlan } from '../services/plansService';
 import { lightColors, darkColors, spacing, typography, borderRadius, shadows } from '../styles/theme';
 import { useAuth } from '../context/AuthContext';
 import { useSubscription } from '../context/SubscriptionContext';
@@ -16,10 +17,31 @@ export const PaywallScreen: React.FC = () => {
   const { refresh } = useSubscription();
   const navigation = useNavigation();
   const [loadingPlanId, setLoadingPlanId] = useState<string | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<string>(PAYMENT_PLANS[0]?.id || 'plan_monthly');
+  const [plans, setPlans] = useState<PaymentPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState<string>('plan_monthly');
   const insets = useSafeAreaInsets();
 
-  const handleSubscribe = async (planId: typeof PAYMENT_PLANS[number]['id']) => {
+  useEffect(() => {
+    loadPlans();
+  }, []);
+
+  const loadPlans = async () => {
+    setPlansLoading(true);
+    try {
+      const fetchedPlans = await fetchPaymentPlans();
+      setPlans(fetchedPlans);
+      if (fetchedPlans.length > 0) {
+        setSelectedPlan(fetchedPlans[0].id);
+      }
+    } catch (error) {
+      console.error('Error loading plans:', error);
+    } finally {
+      setPlansLoading(false);
+    }
+  };
+
+  const handleSubscribe = async (planId: string) => {
     if (!user) {
       Alert.alert('Войдите', 'Авторизуйтесь, чтобы оформить подписку.');
       return;
@@ -59,6 +81,14 @@ export const PaywallScreen: React.FC = () => {
 
   const styles = createStyles(colors, isDark);
 
+  if (plansLoading) {
+    return (
+      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator color={colors.primary} size="large" />
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       style={styles.container}
@@ -97,8 +127,8 @@ export const PaywallScreen: React.FC = () => {
 
       <View style={styles.plansSection}>
         <Text style={styles.plansSectionTitle}>Выберите тариф</Text>
-        {PAYMENT_PLANS.map((plan) => {
-          const isPopular = plan.id === 'plan_quarterly';
+        {plans.map((plan) => {
+          const isPopular = plan.isPopular ?? false;
           const isSelected = selectedPlan === plan.id;
 
           return (

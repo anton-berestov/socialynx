@@ -45,7 +45,11 @@ function TabsNavigator() {
 
 export function AppNavigator() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerBackTitleVisible: false,
+        headerBackTitle: '',
+      }}>
       <Stack.Screen name="Tabs" component={TabsNavigator} options={{ headerShown: false }} />
       <Stack.Screen name="Paywall" component={PaywallScreen} options={{ title: 'SociaLynx PRO' }} />
       <Stack.Screen
