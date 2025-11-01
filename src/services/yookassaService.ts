@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { config } from '../utils/config';
 
-export async function createPaymentSession(userId: string, plan: string) {
+export async function createPaymentSession(userId: string, plan: string, userEmail: string) {
   if (!config.backendUrl) {
     throw new Error('Не настроен backendUrl для ЮKassa');
   }
@@ -9,7 +9,8 @@ export async function createPaymentSession(userId: string, plan: string) {
   try {
     const response = await axios.post(`${config.backendUrl}/createPayment`, {
       userId,
-      plan
+      plan,
+      userEmail
     });
 
     return response.data as {

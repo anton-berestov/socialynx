@@ -49,7 +49,7 @@ export const PaywallScreen: React.FC = () => {
 
     setLoadingPlanId(planId);
     try {
-      const session = await createPaymentSession(user.uid, planId);
+      const session = await createPaymentSession(user.uid, planId, user.email);
       Alert.alert(
         'Перейдите к оплате',
         'После оплаты нажмите "Готово" для обновления статуса.',

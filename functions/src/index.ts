@@ -124,8 +124,8 @@ export const createPayment = functions
       return;
     }
 
-    const { userId, plan } = req.body as { userId?: string; plan?: string };
-    if (!userId || !plan) {
+    const { userId, plan, userEmail } = req.body as { userId?: string; plan?: string; userEmail?: string };
+    if (!userId || !plan || !userEmail) {
       res.status(400).json({ error: 'Invalid payload' });
       return;
     }
@@ -147,23 +147,42 @@ export const createPayment = functions
     const idempotenceKey = randomUUID();
 
     try {
+      const amountValue = (planData.price / 100).toFixed(2);
+
       const response = await axios.post(
         'https://api.yookassa.ru/v3/payments',
         {
           amount: {
-            value: (planData.price / 100).toFixed(2),
+            value: amountValue,
             currency: 'RUB'
           },
           capture: true,
           confirmation: {
             type: 'redirect',
-            return_url: 'https://socialynx.app/payments/success'
+            return_url: 'https://chat-flow.ru'
           },
-          description: planData.description,
+          description: planData.description?.slice(0, 128) || 'Оплата подписки SociaLynx PRO',
           metadata: {
             userId,
             plan
-          }
+          },
+          receipt: {
+            customer: {
+              email: userEmail || 'no-reply@socialynx.app'
+            },
+            items: [
+              {
+                description: planData.title || 'Подписка SociaLynx PRO',
+                quantity: 1,
+                amount: {
+                  value: amountValue,
+                  currency: 'RUB'
+                },
+                vat_code: 1
+              }
+            ]
+          },
+          // save_payment_method: true
         },
         {
           headers: {
@@ -185,8 +204,15 @@ export const createPayment = functions
       });
 
       res.json({ confirmationUrl: response.data.confirmation.confirmation_url, paymentId: response.data.id });
-    } catch (error) {
-      functions.logger.error('YooKassa error', error);
+    } catch (error: any) {
+      functions.logger.error('YooKassa error', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        headers: error.response?.headers,
+        requestBody: error.config?.data,
+      });
+      res.status(500).json({ error: 'Не удалось создать платеж', details: error.response?.data });
       res.status(500).json({ error: 'Не удалось создать платеж' });
     }
   });
