@@ -213,7 +213,6 @@ export const createPayment = functions
         requestBody: error.config?.data,
       });
       res.status(500).json({ error: 'Не удалось создать платеж', details: error.response?.data });
-      res.status(500).json({ error: 'Не удалось создать платеж' });
     }
   });
 
